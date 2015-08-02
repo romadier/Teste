@@ -47,7 +47,8 @@ namespace TesteImposto
         }
 
         private void buttonGerarNotaFiscal_Click(object sender, EventArgs e)
-        {            
+        {   
+         
             NotaFiscalService service = new NotaFiscalService();
             pedido.EstadoOrigem = txtEstadoOrigem.Text;
             pedido.EstadoDestino = txtEstadoDestino.Text;
@@ -60,15 +61,45 @@ namespace TesteImposto
                 pedido.ItensDoPedido.Add(
                     new PedidoItem()
                     {
-                        Brinde = Convert.ToBoolean(row["Brinde"]),
+                        Brinde =  row["Brinde"] is DBNull ? false : Convert.ToBoolean(row["Brinde"] )  ,
                         CodigoProduto =  row["Codigo do produto"].ToString(),
                         NomeProduto = row["Nome do produto"].ToString(),
                         ValorItemPedido = Convert.ToDouble(row["Valor"].ToString())            
                     });
             }
 
-            service.GerarNotaFiscal(pedido);
+            NotaFiscal notafiscal = service.GerarNotaFiscal(pedido);
+            service.GravarXML(notafiscal, System.Configuration.ConfigurationSettings.AppSettings["DiretorioXMLs"]);
+            service.PersistirNota(notafiscal, System.Configuration.ConfigurationSettings.AppSettings["ConnectionString"]);
             MessageBox.Show("Operação efetuada com sucesso");
+            txtEstadoDestino.Clear();
+            txtEstadoOrigem.Clear();
+            textBoxNomeCliente.Clear();
+            table.Rows.Clear();
+            textBoxNomeCliente.Focus();
         }
+        private bool UFValida(string uf)
+        {
+            string[] ufs = new string[] { "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PR", "PB", "PA", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SE", "SP", "TO" };
+
+            return (Array.IndexOf(ufs, uf) > -1);
+        }
+
+        private void txtEstadoOrigem_Validating(object sender, CancelEventArgs e)
+        {
+            e.Cancel = ! UFValida((sender as TextBox).Text);
+            if (e.Cancel)
+                MessageBox.Show("Informe um cep válido!");
+        }
+
+        private void txtEstadoDestino_Validating(object sender, CancelEventArgs e)
+        {
+            e.Cancel = !UFValida((sender as TextBox).Text);
+            if (e.Cancel)
+                MessageBox.Show("Informe um cep válido!");
+
+        }
+
+       
     }
 }

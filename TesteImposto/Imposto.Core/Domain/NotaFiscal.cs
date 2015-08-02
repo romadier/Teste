@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace Imposto.Core.Domain
 {
@@ -17,7 +19,7 @@ namespace Imposto.Core.Domain
         public string EstadoDestino { get; set; }
         public string EstadoOrigem { get; set; }
 
-        public IEnumerable<NotaFiscalItem> ItensDaNotaFiscal { get; set; }
+        public List<NotaFiscalItem> ItensDaNotaFiscal { get; set; }
 
         public NotaFiscal()
         {
@@ -30,8 +32,8 @@ namespace Imposto.Core.Domain
             this.Serie = new Random().Next(Int32.MaxValue);
             this.NomeCliente = pedido.NomeCliente;
 
-            this.EstadoDestino = pedido.EstadoOrigem;
-            this.EstadoOrigem = pedido.EstadoDestino;
+            this.EstadoDestino = pedido.EstadoDestino; 
+            this.EstadoOrigem = pedido.EstadoOrigem; //Estava invertido
 
             foreach (PedidoItem itemPedido in pedido.ItensDoPedido)
             {
@@ -152,7 +154,31 @@ namespace Imposto.Core.Domain
                 }
                 notaFiscalItem.NomeProduto = itemPedido.NomeProduto;
                 notaFiscalItem.CodigoProduto = itemPedido.CodigoProduto;
-            }            
+
+                //Romadier Mendonça
+                //Aplicando regra de IPI
+                if (itemPedido.Brinde)
+                    notaFiscalItem.AliquotaIpi = 0;
+                else
+                    notaFiscalItem.AliquotaIpi = 0.10;
+
+                notaFiscalItem.BaseIpi = itemPedido.ValorItemPedido;
+                notaFiscalItem.ValorIpi = notaFiscalItem.BaseIpi * notaFiscalItem.AliquotaIpi;
+
+                //Romadier Mendonça
+                //Preenchendo o campo desconto quando o cliente for do sudeste
+                if (this.EstadoDestino == "SP" || this.EstadoDestino == "MG" || this.EstadoDestino == "RJ" || this.EstadoDestino == "ES")
+                    notaFiscalItem.Desconto = itemPedido.ValorItemPedido * 0.10;
+                else
+                    notaFiscalItem.Desconto = 0;
+
+
+                //Romadier Mendonça
+                //Não estava gravando o item 
+                this.ItensDaNotaFiscal.Add(notaFiscalItem); 
+            }
+            
+            
         }
     }
 }
